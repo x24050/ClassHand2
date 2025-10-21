@@ -1,47 +1,61 @@
-// server.js (変更後)
+// server.js (Vercel対応版)
 
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import fs from "fs"; // ファイルシステムモジュールを追加
-import path from "path"; // pathモジュールを追加
+import fs from "fs";
+import path from "path";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-// app.use(express.static("public")); // 削除！
 
-// 授業ごとのWebhookマッピング
-// ... (webhookMap の定義)
+// ✅ publicフォルダを静的ファイルとして提供
+app.use(express.static("public"));
 
-// ルートパス ( / ) へのアクセスで、index.html の内容を返す（もしあれば）
-// もし、seatmap.html へのリンクが唯一のフロントエンドであれば、このルートは省略可能
-/*
+// ✅ トップページ（/）で index.html を返す
 app.get("/", (req, res) => {
-    // 例: プロジェクトルートに index.html がある場合
-    res.sendFile(path.join(process.cwd(), "index.html"));
+  const filePath = path.join(process.cwd(), "public", "index.html");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("index.html not found");
+  }
 });
-*/
 
-// seatmap.html へのアクセスで、seatmap.html の内容を返す
+// ✅ seatmap.html も提供
 app.get("/seatmap.html", (req, res) => {
-    // プロジェクトルートに seatmap.html があることを想定
-    const filePath = path.join(process.cwd(), "seatmap.html");
-
-    // ファイルが存在するか確認
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).send("File Not Found");
-    }
+  const filePath = path.join(process.cwd(), "public", "seatmap.html");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("seatmap.html not found");
+  }
 });
 
-// 挙手API
+// ✅ 挙手API（例）
 app.post("/api/raise-hand", async (req, res) => {
-// ... (既存の /api/raise-hand のロジック)
+  try {
+    const { studentId, question } = req.body;
+    if (!studentId) {
+      return res.status(400).json({ error: "studentId is required" });
+    }
+
+    console.log(`🔔 挙手: ${studentId} (${question || "質問なし"})`);
+
+    // 必要であればWebhook通知をここに追加
+    // await fetch(webhookURL, { ... })
+
+    res.json({ message: "挙手を受け付けました" });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
-app.listen(3000, "0.0.0.0", () =>
-  console.log("Server running on http://localhost:3000")
-);
+// ✅ Vercelでは listen() は不要
+// app.listen(3000, "0.0.0.0", () => console.log("Server running on http://localhost:3000"));
+
+// ✅ Vercelで必要なexport
+export default app;
